@@ -10,7 +10,6 @@ const K8sInfo = () => {
   const [contexts, setContexts] = useState<ContextInfo[]>([]);
   const [clusters, setClusters] = useState<string[]>([]);
   const [currentContext, setCurrentContext] = useState<string>('');
-  const [itsData, setItsData] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,7 +19,6 @@ const K8sInfo = () => {
         setContexts(response.data.contexts);
         setClusters(response.data.clusters);
         setCurrentContext(response.data.currentContext);
-        setItsData(response.data.itsData);
         setLoading(false);
       })
       .catch((error) => {
@@ -34,9 +32,10 @@ const K8sInfo = () => {
   if (error) return <p>{error}</p>;
 
   return (
-    <div>
+    <div className="w-full max-w-full p-4">
+      <div className="grid grid-cols-3">
       <div>
-        <h2>Kubernetes Clusters ({clusters.length})</h2>
+        <h2 className="text-2xl font-bold mb-6">Kubernetes Clusters ({clusters.length})</h2>
         <ul>
           {clusters.map(cluster => (
             <li key={cluster}>{cluster}</li>
@@ -45,7 +44,7 @@ const K8sInfo = () => {
       </div>
 
       <div>
-        <h2>Kubernetes Contexts ({contexts.length})</h2>
+        <h2 className="text-2xl font-bold mb-6">Kubernetes Contexts ({contexts.length})</h2>
         <ul>
           {contexts.map(ctx => (
             <li key={ctx.name}>
@@ -55,25 +54,11 @@ const K8sInfo = () => {
           ))}
         </ul>
       </div>
-
       <div>
-        <h2>Current Context</h2>
+        <h2 className="text-2xl font-bold mb-6">Current Context</h2>
         <p>{currentContext}</p>
       </div>
-
-      <div>
-        <h2>ITS Information</h2>
-        <pre style={{ 
-            textAlign: 'left', 
-            padding: '1rem', 
-            background: '#2d2d2d',  // Darker background
-            color: '#ffffff',       // White text
-            borderRadius: '4px',
-            border: '1px solid #444' // Subtle border
-        }}>
-            {typeof itsData === 'object' ? JSON.stringify(itsData, null, 2) : itsData || 'No ITS data available'}
-        </pre>
-      </div>
+    </div>
     </div>
   );
 };
