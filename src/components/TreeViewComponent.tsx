@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, memo } from "react";
+import React, { useState, useEffect, useCallback, useRef, memo } from "react";
 import { Box, Typography, Menu, MenuItem, Button, Alert, Snackbar, Dialog, DialogTitle, DialogContent, DialogActions, IconButton } from "@mui/material";
 import { ReactFlowProvider, Position, MarkerType } from "reactflow";
 import * as dagre from "dagre";
@@ -597,7 +597,7 @@ const TreeViewComponent = (_props: TreeViewComponentProps) => {
   const handleMenuOpen = useCallback((event: React.MouseEvent, nodeId: string) => {
     event.preventDefault();
     event.stopPropagation();
-    const nodeType : string = nodeId.split(":")[1] || '';
+    const nodeType : string = nodeId.split(":")[0] || '';
     setContextMenu({ nodeId, x: event.clientX, y: event.clientY, nodeType: nodeType });
   }, []);
 
@@ -1732,11 +1732,13 @@ const TreeViewComponent = (_props: TreeViewComponentProps) => {
               anchorPosition={contextMenu ? { top: contextMenu.y, left: contextMenu.x } : undefined}
             >
               <MenuItem onClick={() => handleMenuAction("Details")}>Details</MenuItem>
-              {contextMenu.nodeType !== "wds1" && (
-                <MenuItem onClick={() => handleMenuAction("Delete")}>Delete</MenuItem>
+              {contextMenu.nodeType !== "context" && (
+                <React.Fragment>
+                  <MenuItem onClick={() => handleMenuAction("Delete")}>Delete</MenuItem>
+                  <MenuItem onClick={() => handleMenuAction("Edit")}>Edit</MenuItem>
+                  <MenuItem onClick={() => handleMenuAction("Logs")}>Logs</MenuItem>
+                </React.Fragment>
               )}
-              <MenuItem onClick={() => handleMenuAction("Edit")}>Edit</MenuItem>
-              <MenuItem onClick={() => handleMenuAction("Logs")}>Logs</MenuItem>
             </Menu>
           )}
         </Box>
