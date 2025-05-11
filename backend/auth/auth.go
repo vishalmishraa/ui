@@ -50,6 +50,16 @@ func (c *Config) AddUser(username string, password string, permissions []string)
 	}
 }
 
+func (c *Config) UpdateUser(username string, userConfig UserConfig) error {
+	if c.Users == nil {
+		c.Users = make(map[string]UserConfig)
+	}
+
+	c.Users[username] = userConfig
+
+	return SaveConfig(c)
+}
+
 // LoadK8sConfigMap checks if the ConfigMap exists, creates it if not, and returns its data.
 func LoadK8sConfigMap() (*Config, error) {
 	// We'll load the JWT secret from ConfigMap first, then initialize other configs

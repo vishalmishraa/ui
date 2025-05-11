@@ -23,6 +23,7 @@ func setupAuthRoutes(router *gin.Engine) {
 	protected.Use(middleware.AuthenticateMiddleware())
 	{
 		protected.GET("/me", CurrentUserHandler)
+		protected.POST("/me/update-password", UpdatePasswordHandler)
 
 		// Read-only endpoints
 		read := protected.Group("/")
@@ -112,6 +113,31 @@ func CurrentUserHandler(c *gin.Context) {
 		"username":    username,
 		"permissions": permissions,
 	})
+}
+
+func UpdatePasswordHandler(c *gin.Context) {
+	username, exists := c.Get("username")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
+		return
+	}
+
+	var updateData struct {
+		CurrentPassword string `json:"currentPassword"`
+		NewPassword     string `json:"newPassword"`
+	}
+
+	if err := c.ShouldBindJSON(&updateData); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
+		return
+	}
+
+	if err := models.UpdateUserPassword(username.(string), updateData.CurrentPassword, updateData.NewPassword); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Failed to update password"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Password updated successfully"})
 }
 
 // ListUsersHandler returns a list of all users (admin only)

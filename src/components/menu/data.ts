@@ -5,6 +5,7 @@ import {
 } from 'react-icons/hi2';
 
 import { MdPolicy, MdAssuredWorkload } from "react-icons/md";
+import { CgProfile } from "react-icons/cg";
 
 export const menu = [
   {
@@ -48,6 +49,19 @@ export const menu = [
         url: '/wecs/treeview',
         icon: MdAssuredWorkload,
         label: `Deployed Workloads`,
+      },
+    ],
+  },
+    {
+    catalog: 'User',
+    centered: true,
+    marginTop: '1rem',
+    listItems: [
+      {
+        isLink: true,
+        url: '/profile',
+        icon: CgProfile,
+        label: 'Profile',
       },
     ],
   },

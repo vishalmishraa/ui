@@ -57,6 +57,29 @@ func AuthenticateUser(username, password string) (*User, error) {
 	return user, nil
 }
 
+func UpdateUserPassword(username, currentPassword, newPassword string) error {
+	config, err := auth.LoadK8sConfigMap()
+	if err != nil {
+		return errors.New("authentication system unavailable")
+	}
+
+	userConfig, exists := config.GetUser(username)
+	if !exists {
+		return errors.New("user not found")
+	}
+	if userConfig.Password != currentPassword {
+		return errors.New("invalid current password")
+	}
+
+	userConfig.Password = newPassword
+
+	if err := config.UpdateUser(username, userConfig); err != nil {
+		return errors.New("failed to update password")
+	}
+
+	return nil
+}
+
 // HasPermission checks if a user has a specific permission
 func (u *User) HasPermission(permission string) bool {
 	for _, p := range u.Permissions {
