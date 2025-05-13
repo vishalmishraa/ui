@@ -12,6 +12,8 @@ import useTheme from "../stores/themeStore";
 import { useHeaderQueries } from '../hooks/queries/useHeaderQueries';
 import HeaderSkeleton from "./ui/HeaderSkeleton";
 import { useAuth, useAuthActions } from '../hooks/useAuth';
+import LoadingFallback from './LoadingFallback';
+import { useQuery } from "@tanstack/react-query";
 
 interface Context {
   name: string;
@@ -23,6 +25,26 @@ const profileIcons = [
   HiUserCircle,
   // Add more icon components if desired
 ];
+
+
+const token = localStorage.getItem("jwtToken");
+const useGetMe = () => {
+  return useQuery({
+    queryKey: ['get-me'],
+    queryFn: async () => {
+      const response = await api.get("/api/me", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return response.data;
+    },
+    staleTime: 60 * 1000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
+    retry: 3,
+  });
+};
 
 const Header = ({ isLoading }: { isLoading: boolean }) => {
   const [isFullScreen, setIsFullScreen] = React.useState(false);
@@ -54,25 +76,18 @@ const Header = ({ isLoading }: { isLoading: boolean }) => {
     setIsFullScreen((prev) => !prev);
   };
 
+
+  const { data: meData } = useGetMe();
+
+
   useEffect(() => {
     if (authData?.isAuthenticated) {
       const token = localStorage.getItem("jwtToken");
       if (token) {
-        api
-          .get("/api/me", {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          })
-          .then((response) => {
-            setUsername(response.data.username);
-          })
-          .catch((error) => {
-            console.error("Error fetching user data:", error);
-          });
+        setUsername(meData?.username || "");
       }
     }
-  }, [authData?.isAuthenticated]);
+  }, [authData?.isAuthenticated, meData?.username]);
 
   // Close dropdown when clicking outside
   useEffect(() => {

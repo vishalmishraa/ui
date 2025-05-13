@@ -116,7 +116,7 @@ export const useWDSQueries = () => {
         const response = await api.get<Workload[]>('/api/wds/workloads');
         return response.data;
       },
-      staleTime: 5000,
+      staleTime: 60 * 1000,
       gcTime: 300000,
     });
     
@@ -325,7 +325,7 @@ export const useWDSQueries = () => {
         uniqueContexts.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
         return uniqueContexts;
       },
-      staleTime: 5 * 60 * 1000, // 5 minutes
+      staleTime: 60 * 1000, // 5 minutes
       refetchOnMount: true,
       refetchOnWindowFocus: false,
       retry: 3,
