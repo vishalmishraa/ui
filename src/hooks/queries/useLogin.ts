@@ -1,10 +1,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { useWebSocket } from '../../context/WebSocketProvider';
+import { useNamespacesWebSocket, useWecsWebSocket } from '../../hooks/useWebSocket';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import { LoginUser, VerifyToken } from '../../api/auth';
 import { AUTH_QUERY_KEY } from '../../api/auth/constant';
+import { LoginResponse } from '../../api/auth/types';
 
 interface LoginCredentials {
   username: string;
@@ -14,7 +15,8 @@ interface LoginCredentials {
 
 export const useLogin = () => {
   const navigate = useNavigate();
-  const { connect, connectWecs } = useWebSocket();
+  const namespaces = useNamespacesWebSocket();
+  const wecs = useWecsWebSocket();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -58,9 +60,8 @@ export const useLogin = () => {
       
       toast.success('Login successful');
       
-      // Connect to websockets with new token
-      connect(true);
-      connectWecs(true);
+      namespaces.connect();
+      wecs.connect();
       
       // Update auth state
       queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });

@@ -42,9 +42,8 @@ import TreeViewSkeleton from "./ui/TreeViewSkeleton";
 import DynamicDetailsPanel from "./DynamicDetailsPanel";
 import GroupPanel from "./GroupPanel";
 import ReactDOM from "react-dom";
-import { useQuery } from "@tanstack/react-query";
 import { isEqual } from "lodash";
-import { useWebSocket } from "../context/WebSocketProvider";
+import { useWebSocketQuery } from "../hooks/queries/useWebSocketQuery";
 import useTheme from "../stores/themeStore";
 import axios from "axios";
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
@@ -537,18 +536,48 @@ const TreeViewComponent = (_props: TreeViewComponentProps) => {
   const [resources, setResources] = useState<ResourceItem[]>([]);
   const [contextResourceCounts, setContextResourceCounts] = useState<Record<string, number>>({});
   const [totalResourceCount, setTotalResourceCount] = useState<number>(0);
+  const [hasValidData, setHasValidData] = useState<boolean>(false);
   const location = useLocation();
 
-  const { isConnected, connect, hasValidData } = useWebSocket();
   const NAMESPACE_QUERY_KEY = ["namespaces"];
-
-  const { data: websocketData } = useQuery<NamespaceResource[]>({
+  
+  const {
+    data: websocketData,
+    isConnected,
+    isLoading: wsLoading,
+  } = useWebSocketQuery<NamespaceResource[]>({
+    url: "/ws/namespaces",
     queryKey: NAMESPACE_QUERY_KEY,
-    queryFn: async () => {
-      throw new Error("API not implemented");
+    enabled: true,
+    onMessage: (data) => {
+      if (data && data.length > 0) {
+        setDataReceived(true);
+        setHasValidData(true);
+      }
     },
-    enabled: false,
-    initialData: [],
+    onConnect: () => {
+      console.log(`[TreeView] WebSocket connected at ${performance.now() - renderStartTime.current}ms`);
+    },
+    onDisconnect: () => {
+      console.log(`[TreeView] WebSocket disconnected at ${performance.now() - renderStartTime.current}ms`);
+    },
+    onError: (error) => {
+      console.error(`[TreeView] WebSocket error at ${performance.now() - renderStartTime.current}ms:`, error);
+      setHasValidData(false);
+    },
+    transform: (data) => {
+      if (!Array.isArray(data)) {
+        console.error("[TreeView] Received non-array data from WebSocket");
+        return [];
+      }
+      
+      return data.filter(
+        (namespace) =>
+          !["kubestellar-report", "kube-node-lease", "kube-public", "default", "kube-system", "open-cluster-management-hub","open-cluster-management","local-path-storage"].includes(namespace.name)
+      );
+    },
+    autoReconnect: true,
+    reconnectInterval: 3000
   });
 
   // Use a ref to track if this is the initial render
@@ -574,11 +603,6 @@ const TreeViewComponent = (_props: TreeViewComponentProps) => {
     }, 1000);
     return () => clearTimeout(timer);
   }, []);
-
-  useEffect(() => {
-    console.log(`[TreeView] Initiating WebSocket connection at ${performance.now() - renderStartTime.current}ms`);
-    connect(true);
-  }, [connect]);
 
   useEffect(() => {
     if (websocketData !== undefined && !dataReceived) {
@@ -1071,7 +1095,7 @@ const TreeViewComponent = (_props: TreeViewComponentProps) => {
   );
 
   useEffect(() => {
-    if (websocketData !== undefined) {
+    if (websocketData !== undefined && websocketData !== null) {
       console.log(
         `[TreeView] websocketData received with ${websocketData.length} namespaces at ${performance.now() - renderStartTime.current}ms`
       );
@@ -1315,22 +1339,28 @@ const TreeViewComponent = (_props: TreeViewComponentProps) => {
   const handleToggleCollapse = useCallback(() => {
     setIsCollapsed((prev) => !prev);
     setIsTransforming(true);
-    transformDataToTree(websocketData);
+    if (websocketData) {
+      transformDataToTree(websocketData);
+    }
   }, [websocketData, transformDataToTree]);
 
   const handleExpandAll = useCallback(() => {
     setIsExpanded(true);
     setIsTransforming(true);
-    transformDataToTree(websocketData);
+    if (websocketData) {
+      transformDataToTree(websocketData);
+    }
   }, [websocketData, transformDataToTree]);
 
   const handleCollapseAll = useCallback(() => {
     setIsExpanded(false);
     setIsTransforming(true);
-    transformDataToTree(websocketData);
+    if (websocketData) {
+      transformDataToTree(websocketData);
+    }
   }, [websocketData, transformDataToTree]);
 
-  const isLoading = !isConnected || !hasValidData || isTransforming || !minimumLoadingTimeElapsed;
+  const isLoading = !isConnected || !hasValidData || isTransforming || !minimumLoadingTimeElapsed || wsLoading;
 
   useEffect(() => {
     // Only log to console when specific values change to reduce unnecessary renders

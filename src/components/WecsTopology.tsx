@@ -42,7 +42,7 @@ import WecsTreeviewSkeleton from "./ui/WecsTreeviewSkeleton";
 import ListViewSkeleton from "./ui/ListViewSkeleton";
 import ReactDOM from "react-dom";
 import { isEqual } from "lodash";
-import { useWebSocket } from "../context/WebSocketProvider";
+import { useWebSocketQuery } from "../hooks/queries/useWebSocketQuery";
 import useTheme from "../stores/themeStore";
 import WecsDetailsPanel from "./WecsDetailsPanel";
 import { FlowCanvas } from "./Wds_Topology/FlowCanvas";
@@ -534,6 +534,7 @@ const WecsTreeview = () => {
   const [minimumLoadingTimeElapsed, setMinimumLoadingTimeElapsed] = useState<boolean>(false);
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
   const [isExpanded, setIsExpanded] = useState<boolean>(true);
+  const [hasValidWecsData, setHasValidWecsData] = useState<boolean>(false);
   const nodeCache = useRef<Map<string, CustomNode>>(new Map());
   const edgeCache = useRef<Map<string, CustomEdge>>(new Map());
   const edgeIdCounter = useRef<number>(0);
@@ -544,7 +545,49 @@ const WecsTreeview = () => {
   const stateRef = useRef({ isCollapsed, isExpanded });
   const [viewMode, setViewMode] = useState<'tiles' | 'list'>('tiles');
 
-  const { wecsIsConnected, hasValidWecsData, wecsData } = useWebSocket();
+  const WECS_QUERY_KEY = ["wecs"];
+  
+  const {
+    data: wecsData,
+    isConnected: wecsIsConnected,
+    isLoading: wecsLoading,
+  } = useWebSocketQuery<WecsCluster[]>({
+    url: "/ws/wecs",
+    queryKey: WECS_QUERY_KEY,
+    enabled: true,
+    onMessage: (data) => {
+      if (data && data.length > 0) {
+        setDataReceived(true);
+        setHasValidWecsData(true);
+      }
+    },
+    onConnect: () => {
+      console.log(`[WecsTopology] WebSocket connected at ${performance.now() - renderStartTime.current}ms`);
+    },
+    onDisconnect: () => {
+      console.log(`[WecsTopology] WebSocket disconnected at ${performance.now() - renderStartTime.current}ms`);
+    },
+    onError: (error) => {
+      console.error(`[WecsTopology] WebSocket error at ${performance.now() - renderStartTime.current}ms:`, error);
+      setHasValidWecsData(false);
+    },
+    transform: (data) => {
+      if (!Array.isArray(data)) {
+        console.error("[WecsTopology] Received non-array data from WebSocket");
+        return [];
+      }
+      
+      return data.map(cluster => ({
+        ...cluster,
+        namespaces: cluster.namespaces?.filter(
+          (ns) =>
+            !["kubestellar-report", "kube-node-lease", "kube-public", "default", "kube-system", "open-cluster-management-hub","open-cluster-management","local-path-storage"].includes(ns.namespace)
+        ),
+      }));
+    },
+    autoReconnect: true,
+    reconnectInterval: 3000
+  });
 
   useEffect(() => {
     renderStartTime.current = performance.now();
@@ -1114,10 +1157,10 @@ const WecsTreeview = () => {
   );
 
   useEffect(() => {
-    if (wecsData !== null && !isEqual(wecsData, prevWecsData.current)) {
+    if (wecsData !== null && wecsData !== undefined && !isEqual(wecsData, prevWecsData.current)) {
       setIsTransforming(true);
-      transformDataToTree(wecsData as WecsCluster[]);
-      prevWecsData.current = wecsData as WecsCluster[];
+      transformDataToTree(wecsData);
+      prevWecsData.current = wecsData;
     }
   }, [wecsData, transformDataToTree]);
 
@@ -1227,7 +1270,9 @@ const WecsTreeview = () => {
       const newCollapsed = !prev;
       stateRef.current.isCollapsed = newCollapsed;
       setIsTransforming(true);
-      transformDataToTree(wecsData as WecsCluster[]);
+      if (wecsData) {
+        transformDataToTree(wecsData);
+      }
       return newCollapsed;
     });
   }, [wecsData, transformDataToTree]);
@@ -1237,7 +1282,9 @@ const WecsTreeview = () => {
       const newExpanded = true;
       stateRef.current.isExpanded = newExpanded;
       setIsTransforming(true);
-      transformDataToTree(wecsData as WecsCluster[]);
+      if (wecsData) {
+        transformDataToTree(wecsData);
+      }
       return newExpanded;
     });
   }, [wecsData, transformDataToTree]);
@@ -1247,12 +1294,14 @@ const WecsTreeview = () => {
       const newExpanded = false;
       stateRef.current.isExpanded = newExpanded;
       setIsTransforming(true);
-      transformDataToTree(wecsData as WecsCluster[]);
+      if (wecsData) {
+        transformDataToTree(wecsData);
+      }
       return newExpanded;
     });
   }, [wecsData, transformDataToTree]);
 
-  const isLoading = !wecsIsConnected || !hasValidWecsData || isTransforming || !minimumLoadingTimeElapsed;
+  const isLoading = !wecsIsConnected || !hasValidWecsData || isTransforming || !minimumLoadingTimeElapsed || wecsLoading;
 
   return (
     <Box sx={{ display: "flex", height: "85vh", width: "100%", position: "relative" }}>
