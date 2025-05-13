@@ -26,15 +26,16 @@ const profileIcons = [
   // Add more icon components if desired
 ];
 
-
-const token = localStorage.getItem("jwtToken");
 const useGetMe = () => {
+  const token = localStorage.getItem("jwtToken");
+  
   return useQuery({
     queryKey: ['get-me'],
     queryFn: async () => {
+      const currentToken = localStorage.getItem("jwtToken");
       const response = await api.get("/api/me", {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${currentToken}`,
         },
       });
       return response.data;
@@ -43,6 +44,7 @@ const useGetMe = () => {
     refetchOnMount: true,
     refetchOnWindowFocus: false,
     retry: 3,
+    enabled: !!token,
   });
 };
 
