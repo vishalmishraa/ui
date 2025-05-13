@@ -315,6 +315,23 @@ export const useWDSQueries = () => {
     return query;
   };
 
+  const useGetWdContexts = () => {
+    return useQuery({
+      queryKey: ['get-contexts'],
+      queryFn: async () => {
+        const response = await api.get("/wds/get/context");
+        const contextList = response.data["other-wds-context"] || [];
+        const uniqueContexts = [...new Set([...contextList])];
+        uniqueContexts.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+        return uniqueContexts;
+      },
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnMount: true,
+      refetchOnWindowFocus: false,
+      retry: 3,
+    });
+  }; 
+
   return {
     useWorkloads,
     useWorkloadDetails,
@@ -325,5 +342,6 @@ export const useWDSQueries = () => {
     useScaleWorkload,
     useDeleteWorkload,
     useWorkloadLogs,
+    useGetWdContexts,
   };
 };

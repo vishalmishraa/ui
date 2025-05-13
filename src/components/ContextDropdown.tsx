@@ -1,12 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Box, MenuItem, Select, Typography, Chip, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, CircularProgress } from "@mui/material";
 import { SelectChangeEvent } from "@mui/material/Select";
 import { toast } from "react-hot-toast";
 import useTheme from "../stores/themeStore";
-import { api } from "../lib/api";
 import FilterListIcon from '@mui/icons-material/FilterList';
 import AddIcon from "@mui/icons-material/Add";
 import { useContextCreationWebSocket } from "../hooks/useWebSocket";
+import { useWDSQueries } from "../hooks/queries/useWDSQueries";
 
 interface ContextDropdownProps {
   onContextFilter: (context: string) => void;
@@ -19,7 +19,6 @@ const ContextDropdown = ({
   resourceCounts = {}, 
   totalResourceCount = 0 
 }: ContextDropdownProps) => {
-  const [contexts, setContexts] = useState<string[]>([]);
   const [selectedContext, setSelectedContext] = useState<string>("all"); // Default to show all contexts
   const { theme } = useTheme();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -29,17 +28,8 @@ const ContextDropdown = ({
   const [creationError, setCreationError] = useState("");
   const [creationSuccess, setCreationSuccess] = useState("");
   const [messages, setMessages] = useState<string[]>([]);
-
-  useEffect(() => {
-    api.get("/wds/get/context")
-      .then((response) => {
-        const contextList = response.data["other-wds-context"] || [];
-        const uniqueContexts = [...new Set([...contextList])];
-        uniqueContexts.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
-        setContexts(uniqueContexts);
-      })
-      .catch((error) => console.error("Error fetching contexts:", error));
-  }, []);
+  const { useGetWdContexts } = useWDSQueries();
+  const { data: contexts = [] } = useGetWdContexts();
 
   const handleContextChange = (event: SelectChangeEvent<string>) => {
     const newContext = event.target.value as string;
@@ -281,7 +271,7 @@ const ContextDropdown = ({
                 }}
               />
             </MenuItem>
-        {contexts.map((context) => (
+        { contexts.length > 0 && contexts.map((context) => (
               <MenuItem 
                 key={context} 
                 value={context} 
